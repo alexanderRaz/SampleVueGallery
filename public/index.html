@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>IndexDB</title>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet"> 
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+</head>
+<body>
+
+<div id="app">
+            
+</div>
+<script>
+    var app = new Vue({
+            template: `<v-app id="inspire" 
+                    style="background-color: white; min-height: auto;">
+                    <v-tabs
+                        background-color="white"
+                        color="#ffbe08"                
+                    >
+                        <v-tab style="font: 600 14px/1.2 GrotesqueRegular, Calibri, Tahoma, Arial; text-transform: uppercase;">Галерея фотографий в IndexDB</v-tab>                    
+                        <v-tab-item>
+                            <v-row style="width: auto;">
+                              <v-col cols="12">
+                                <v-card>
+                                  <v-container>
+                                    <v-row style="width: auto;">                                  
+                                      <template v-if="fotos.length==0">
+                                        <v-col
+                                            class="d-flex child-flex"
+                                            cols="12"
+                                          >
+                                            <v-card flat tile class="d-flex">
+                                                <v-card-title                                                
+                                                    style="word-break: normal; cursor: default; color: #ffbe08;" 
+                                                >Отсутствуют фотографии.</v-card-title> 
+                                            </v-card>
+                                          </v-col>
+                                      </template>
+                                      <template v-else>
+                                          <v-col
+                                            v-for="(foto, n) in fotos"
+                                            :key="n"
+                                            class="d-flex child-flex"
+                                            cols="4" md="2"
+                                          >
+                                            <v-card flat tile class="d-flex">
+                                              <v-img
+                                                :src="foto.url"                                            
+                                                aspect-ratio="1"
+                                                class="grey lighten-2"
+                                                style="cursor: pointer;"
+                                                @click="showImage(n)"
+                                              >
+                                                <v-btn
+                                                    style="top: 1px; right:1px; border-color: rgba(0,0,0,0);"
+                                                    absolute
+                                                    fab
+                                                    text                                    
+                                                    @click.stop = "requestDeleteFoto(foto, n)"
+                                                    color="#ffbe08"
+                                                    outlined
+                                                >
+                                                    <v-icon>mdi-close</v-icon>
+                                                </v-btn>
+                                              
+                                                <template v-slot:placeholder>
+                                                  <v-row
+                                                    class="fill-height ma-0"
+                                                    align="center"
+                                                    justify="center"
+                                                  >
+                                                    <v-progress-circular indeterminate color="grey lighten-5"></v-progress-circular>
+                                                  </v-row>
+                                                </template>
+                                              </v-img>
+                                            </v-card>
+                                          </v-col>
+                                      </template>
+                                    </v-row>
+                                    <v-btn
+                                        style="border-color: rgba(0,0,0,0);"
+                                        absolute
+                                        fab
+                                        text                                  
+                                        top
+                                        right
+                                        x-large
+                                        color="#ffbe08"
+                                        outlined
+                                        @click="dialogAddFoto = true"
+                                    >
+                                        <v-icon>mdi-plus-circle</v-icon>
+                                    </v-btn>
+                                    <v-dialog
+                                        persistent
+                                        v-model="dialogAddFoto"
+                                        max-width="400"
+                                    >
+                                        <v-card>
+                                          <v-card-title class="headline">Загрузка фотографий</v-card-title>
+                                  
+                                          <v-card-text>
+                                            <v-file-input
+                                              id="input_file_fotos"
+                                              placeholder="Выберите фотографии"
+                                              show-size 
+                                              counter 
+                                              multiple
+                                              filled
+                                              prepend-icon="mdi-camera"
+                                              color = "#101828"
+                                              accept="image/*"
+                                              clearable
+                                              :disabled="notExecUpload"
+                                              :loading="notExecUpload"
+                                              ref="v_file_fotos_input"
+                                            ></v-file-input>
+                                          </v-card-text>
+                                  
+                                          <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                  
+                                            <v-btn
+                                              color="red darken-1"
+                                              text
+                                              @click="cancelUpload"
+                                              :disabled="notExecUpload"
+                                            >
+                                              Отменить
+                                            </v-btn>
+                                  
+                                            <v-btn
+                                              color="green darken-1"
+                                              text
+                                              @click="saveFoto"
+                                              :disabled="notExecUpload"
+                                            >
+                                              Сохранить
+                                            </v-btn>
+                                          </v-card-actions>
+                                        </v-card>
+                                    </v-dialog>
+                                    <v-dialog
+                                        persistent
+                                        v-model="dialogConfirmDeleteFoto"
+                                        max-width="320"
+                                    >
+                                        <v-card>
+                                          <v-card-title class="headline">Подтвердите удаление фотографии</v-card-title>
+                                  
+                                          <v-card-text>
+                                            <v-img
+                                                :src="fotoForDevaring.url"                                            
+                                                aspect-ratio="1"
+                                                class="grey lighten-2"
+                                            >                                              
+                                                <template v-slot:placeholder>
+                                                  <v-row
+                                                    class="fill-height ma-0"
+                                                    align="center"
+                                                    justify="center"
+                                                  >
+                                                    <v-progress-circular indeterminate color="grey lighten-5"></v-progress-circular>
+                                                  </v-row>
+                                                </template>
+                                            </v-img>
+                                          </v-card-text>                                  
+                                          <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                  
+                                            <v-btn
+                                              color="red darken-1"
+                                              text
+                                              @click="cancelDelete"
+                                              :disabled="notExecDelete"
+                                            >
+                                              Отменить
+                                            </v-btn>
+                                  
+                                            <v-btn
+                                              color="green darken-1"
+                                              text
+                                              @click="DeleteFoto"
+                                              :disabled="notExecDelete"
+                                            >
+                                              Удалить
+                                            </v-btn>
+                                          </v-card-actions>
+                                        </v-card>
+                                    </v-dialog>                                   
+                                  </v-container>
+                                </v-card>
+                              </v-col>
+                            </v-row>
+                        </v-tab-item>
+                    </v-tabs>
+                    <v-overlay :value="overlay" style="z-index:51;" opacity="0.9">                
+                        <v-container style="margin: 0 auto; width:95vw; height: 95vh;">
+                            <v-row style="width: auto; height: 100%">
+                                <v-col cols="1" style="position: relative">
+                                    <v-btn
+                                        icon
+                                        @click="priviousSlide"
+                                        style="position: absolute; top: calc(50% - 18px); left: calc(50% - 18px);"
+                                    >
+                                        <v-icon>mdi-chevron-left</v-icon>
+                                    </v-btn>
+                                </v-col>
+                                <v-col cols="10" class="d-flex child-flex" style="position: relative; max-height: 100%;">
+                                    <v-img
+                                        :src="currentFotoSrc"                        
+                                        contain
+                                        @load="showProgress = false"
+                                    >     
+                                        <v-progress-circular
+                                            v-show="showProgress"
+                                            indeterminate 
+                                            color="grey lighten-5"
+                                            style="position: absolute; top: calc(50% - 16px); left: calc(50% - 16px);"
+                                        >
+                                        </v-progress-circular>
+                                        
+                                        <v-btn
+                                            icon
+                                            @click="overlay = false"
+                                            style="position: absolute; top: calc(50% - 18px); left: calc(50% - 18px);"
+                                        >
+                                            <v-icon>mdi-close</v-icon>
+                                        </v-btn>                                        
+                                    </v-img>
+                                </v-col>
+                                <v-col cols="1" style="position: relative" >
+                                    <v-btn
+                                        icon
+                                        @click="nextSlide"
+                                        style="position: absolute; top: calc(50% - 18px); left: calc(50% - 18px);"
+                                    >
+                                        <v-icon>mdi-chevron-right</v-icon>
+                                    </v-btn>
+                                </v-col>
+                            </v-row>
+                        </v-container>
+                    </v-overlay>
+                </v-app>`
+            ,
+            el: '#app',
+            data: {
+                dialogAddFoto: false,
+                dialogConfirmDeleteFoto: false,
+                fotoForDevaring: {},
+                indexFotoForDevaring: 0,                
+                currentFotoSrc:'',
+                overlay: false,
+                showProgress: true,
+                notExecUpload: false,
+                notExecDelete: false,
+                fotos:[],
+                currIndex: 0,
+            },
+            vuetify: new Vuetify(),
+            methods:{
+                showImage: function(n){
+                    this.currIndex = n;
+                    this.currentFotoSrc = this.fotos[n].url;
+                    this.overlay = true;
+                    this.showProgress = true;
+                },
+                nextSlide: function(){
+                    this.currIndex++;
+                    if(this.currIndex >= this.fotos.length){
+                        this.currIndex = 0;
+                    }
+                    this.currentFotoSrc = this.fotos[this.currIndex].url;
+                    this.showProgress = true;
+                },
+                priviousSlide: function(){
+                    this.currIndex--;
+                    if(this.currIndex < 0){
+                        this.currIndex = this.fotos.length - 1;
+                    }
+                    this.currentFotoSrc = this.fotos[this.currIndex].url;
+                    this.showProgress = true;
+                },
+                saveFoto: function(e){
+                    var input = document.getElementById("input_file_fotos");
+                    if(!this.notExecUpload) {
+                        this.notExecUpload = true;
+                        var that = this;
+                        add_file(input.files, function(err, data){
+                            that.notExecUpload = false;
+                            that.$refs.v_file_fotos_input.clearableCallback();
+                            that.dialogAddFoto = false;
+                            for(var i = 0; i < data.length; i++){
+                                that.fotos.push(data[i]);
+                            }
+                        });
+                    }                    
+                },
+                cancelUpload: function(){
+                    this.dialogAddFoto = false;
+                    this.$refs.v_file_fotos_input.clearableCallback();
+                },
+                requestDeleteFoto(foto, index){
+                    this.fotoForDevaring = foto;
+                    this.indexFotoForDevaring = index;
+                    this.dialogConfirmDeleteFoto = true;
+                    
+                },                
+                DeleteFoto: function(){
+                    var that = this; 
+                    this.notExecDelete = true;
+                    deleteFoto(that.fotos[this.indexFotoForDevaring].id, function(res){
+                        if(res){
+                            that.fotos.splice(that.indexFotoForDevaring, 1);
+                        }
+                        that.notExecDelete = false;
+                        that.dialogConfirmDeleteFoto = false;
+                    });
+                },
+                cancelDelete: function(){
+                    this.dialogConfirmDeleteFoto = false;                    
+                },
+                initFotos: function(arr){
+                    this.fotos = arr;
+                }
+            }
+        });
+    
+    
+    
+    
+    
+    
+    var name = "list_image_bd"; //имя БД
+    var version = 1; //Версия БД
+	var openRequest = indexedDB.open(name, version);
+    //indexedDB.deleteDatabase('list_image_bd');
+    openRequest.onupgradeneeded = function(event) {
+        var db = openRequest.result;
+        switch(event.oldVersion) {
+            case 0:
+                console.log("Базы данных не существует");
+                var list_image = db.createObjectStore('list_image', {keyPath: 'id', autoIncrement:true});                
+        }
+    };
+
+    openRequest.onerror = function() {
+      console.error("Error", openRequest.error);
+    };
+    
+    var add_file;
+    var deleteFoto;
+
+    openRequest.onsuccess = function() {
+        var db = openRequest.result;
+        
+        //Читаем из базы
+        //Создаем транзацию
+        var transaction = db.transaction("list_image", "readwrite");
+        //Получаем объект хранилище
+        var list_image = transaction.objectStore("list_image");
+        //Формируем запрос на поиск
+        var request = list_image.getAll();
+        
+        request.onsuccess = function() {
+            console.log("Считаны картинки из хранилища", request.result);
+            app.initFotos(request.result);
+        };
+
+        request.onerror = function() {
+          console.log("Ошибка", request.error);
+        }; 
+        
+        add_file = function(files, cb){
+            //Получаем файл
+            if(files.length > 0){
+                
+                var arrResult = [];
+                
+                save(0, function(){
+                    cb(null, arrResult);
+                })
+                
+                function save(i, callback){
+                    //Читаем файл
+                    var reader = new FileReader();
+                    reader.readAsDataURL(files[i]); // конвертирует Blob в base64 и вызывает onload
+
+                    reader.onload = function() {                    
+                        //создать транзакцию и указать все хранилища, к которым необходим доступ,
+                        var transaction = db.transaction("list_image", "readwrite");
+                        // получить хранилище объектов для работы с ним
+                        var list_image = transaction.objectStore("list_image");
+                        var saveObj = {
+                            url: reader.result
+                        }; // url с данными
+                        var request = list_image.add(saveObj);
+
+                        request.onsuccess = function() {
+                            console.log("Картинка добавлена в хранилище", request.result);
+                            saveObj.id = request.result;
+                            arrResult.push(saveObj);
+                            i++
+                            if(i == files.length)
+                                callback();
+                            else 
+                                save(i, callback);
+                        };
+
+                        request.onerror = function() {
+                            console.log("Ошибка", request.error);
+                        };
+                        
+                    };
+                }
+            }       
+        };
+
+        deleteFoto = function(id, cb){
+            var transaction = db.transaction("list_image", "readwrite");
+            // получить хранилище объектов для работы с ним
+            var list_image = transaction.objectStore("list_image");
+            var request = list_image.delete(id);
+            request.onsuccess = function() {
+                console.log("Удалена картинка из хранилища c id:" + id);
+                cb(true);
+            };
+
+            request.onerror = function() {
+                console.log("Ошибка", request.error);
+                cb(false);
+            }; 
+        }
+    };
+    
+    openRequest.onblocked = function() {
+      // есть другое соединение к той же базе
+      // и оно не было закрыто после срабатывания на нём db.onversionchange
+      alert("Пожалуйста, перезагрузите другие вкладки работающие с нашим сайтом.");
+    };
+</script>
+</body>
+</html>
